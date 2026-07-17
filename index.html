@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>Coal Load QC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1B1918;
+    --surface:#252220;
+    --surface-2:#2E2A27;
+    --panel:#16140F;
+    --border:#3B352E;
+    --border-soft:#2E2A25;
+    --text:#F3EEE3;
+    --text-dim:#B4AB9C;
+    --text-faint:#7C7364;
+    --amber:#FFA726;
+    --amber-dim:#B37418;
+    --amber-glow:rgba(255,167,38,.28);
+    --teal:#49C9B8;
+    --teal-glow:rgba(73,201,184,.22);
+    --red:#E5595F;
+    --green:#6FC98A;
+    --font-display:'Oswald',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,167,38,.06), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(73,201,184,.05), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--amber-glow);}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+  a{color:inherit;}
+  .hidden{display:none !important;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+  }
+
+  /* ---------- app header ---------- */
+  .app-header{
+    position:sticky;top:0;z-index:20;
+    background:rgba(27,25,24,.9);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border-soft);
+    padding:14px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .app-header .left{display:flex;align-items:center;gap:12px;}
+  .back-btn{
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text-dim);
+    width:34px;height:34px;
+    border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;
+  }
+  .app-header h2{
+    font-family:var(--font-display);
+    font-size:16px;
+    margin:0;
+    font-weight:600;
+    letter-spacing:.02em;
+  }
+  .conn-chip{
+    display:flex;align-items:center;gap:7px;
+    font-size:11.5px;
+    color:var(--text-faint);
+  }
+  .conn-chip .cdot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+
+  .container{
+    max-width:720px;
+    margin:0 auto;
+    padding:20px 16px 90px;
+  }
+
+  .field{margin-bottom:16px;}
+  .field label{
+    display:block;
+    font-size:11.5px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--text-faint);
+    margin-bottom:7px;
+    font-weight:600;
+  }
+  .field input, .field select{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:11px 13px;
+    color:var(--text);
+    font-size:15px;
+    outline:none;
+    transition:border-color .15s;
+  }
+  .field input:focus, .field select:focus{
+    border-color:var(--amber);
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    border:none;
+    border-radius:8px;
+    padding:12px 18px;
+    font-size:14.5px;
+    font-weight:600;
+    transition:transform .1s, opacity .15s, background .15s;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primary{
+    background:var(--amber);
+    color:#1B1500;
+    width:100%;
+  }
+  .btn-primary:hover{background:#ffb44d;}
+  .btn-ghost{
+    background:transparent;
+    color:var(--text-dim);
+    border:1px solid var(--border);
+  }
+  .btn-ghost:hover{border-color:var(--text-faint);color:var(--text);}
+  .btn-danger-ghost{
+    background:transparent;
+    border:1px solid var(--red);
+    color:var(--red);
+    padding:8px 12px;
+    font-size:13px;
+  }
+
+  /* ---------- loads list ---------- */
+  .toolbar{
+    display:flex;gap:10px;margin-bottom:18px;
+  }
+  .search-input{
+    flex:1;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:11px 14px;
+    color:var(--text);
+    font-size:14px;
+    outline:none;
+  }
+  .search-input:focus{border-color:var(--amber);}
+  .fab-add{
+    background:var(--amber);
+    color:#1B1500;
+    border:none;
+    border-radius:8px;
+    padding:0 18px;
+    font-weight:700;
+    font-size:14px;
+    white-space:nowrap;
+  }
+
+  .load-card{
+    padding:16px 16px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+    transition:border-color .15s;
+  }
+  .load-card:hover{border-color:var(--text-faint);}
+  .load-card .info{display:flex;flex-direction:column;gap:6px;}
+  .load-card .vehicle{
+    font-family:var(--font-mono);
+    font-size:17px;
+    font-weight:700;
+    letter-spacing:.02em;
+  }
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    font-weight:700;
+    padding:3px 8px;
+    border-radius:5px;
+    width:fit-content;
+  }
+  .badge-lump{background:rgba(255,167,38,.14);color:var(--amber);border:1px solid rgba(255,167,38,.35);}
+  .badge-crushed{background:rgba(73,201,184,.14);color:var(--teal);border:1px solid rgba(73,201,184,.35);}
+  .load-card .meta{font-size:11.5px;color:var(--text-faint);}
+  .load-card .stats{display:flex;gap:14px;text-align:right;}
+  .stat-mini{display:flex;flex-direction:column;}
+  .stat-mini .v{font-family:var(--font-mono);font-size:16px;font-weight:700;}
+  .stat-mini .l{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);margin-top:2px;}
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--text-faint);
+  }
+  .empty-state .big{font-size:40px;margin-bottom:12px;}
+  .empty-state p{font-size:13.5px;margin:4px 0 0;}
+
+  /* ---------- load detail ---------- */
+  .detail-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .detail-head .vehicle-big{
+    font-family:var(--font-mono);
+    font-size:26px;
+    font-weight:700;
+  }
+
+  .summary-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:22px;
+  }
+  .readout{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 16px 14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .readout::before{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%);
+    pointer-events:none;
+  }
+  .readout .label{
+    font-family:var(--font-display);
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--text-faint);
+    margin-bottom:8px;
+  }
+  .readout .digits{
+    font-family:var(--font-mono);
+    font-size:32px;
+    font-weight:700;
+    color:var(--amber);
+    text-shadow:0 0 18px var(--amber-glow);
+    line-height:1;
+  }
+  .readout.teal .digits{color:var(--teal);text-shadow:0 0 18px var(--teal-glow);}
+  .readout .digits .unit{font-size:16px;color:var(--text-faint);margin-left:2px;text-shadow:none;}
+  .readout .sub{font-size:11px;color:var(--text-faint);margin-top:6px;}
+
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:16px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .tab-btn{
+    background:none;border:none;
+    color:var(--text-faint);
+    font-family:var(--font-display);
+    font-size:13.5px;
+    letter-spacing:.03em;
+    padding:10px 4px 12px;
+    position:relative;
+    font-weight:500;
+  }
+  .tab-btn.active{color:var(--text);}
+  .tab-btn.active::after{
+    content:"";
+    position:absolute;left:0;right:0;bottom:-1px;
+    height:2px;background:var(--amber);
+    border-radius:2px;
+  }
+  .tab-count{
+    display:inline-flex;
+    align-items:center;justify-content:center;
+    min-width:18px;height:18px;
+    background:var(--surface-2);
+    border-radius:9px;
+    font-size:10.5px;
+    font-family:var(--font-body);
+    margin-left:6px;
+    padding:0 5px;
+    color:var(--text-dim);
+  }
+
+  .add-sample-card{
+    padding:16px;
+    margin-bottom:18px;
+  }
+  .add-sample-card h3{
+    font-family:var(--font-display);
+    font-size:14px;
+    margin:0 0 14px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    color:var(--text-dim);
+    display:flex;align-items:center;gap:8px;
+  }
+  .form-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+  }
+  .form-grid .field{margin-bottom:0;}
+  .live-preview{
+    margin-top:14px;
+    background:var(--panel);
+    border:1px dashed var(--border);
+    border-radius:8px;
+    padding:12px 14px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .live-preview .lp-label{font-size:12px;color:var(--text-faint);}
+  .live-preview .lp-value{
+    font-family:var(--font-mono);
+    font-size:20px;
+    font-weight:700;
+    color:var(--amber);
+  }
+  .live-preview .lp-value.teal{color:var(--teal);}
+  .add-sample-card .btn{margin-top:14px;width:100%;}
+
+  .sample-item{
+    padding:13px 15px;
+    margin-bottom:8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+  }
+  .sample-item .sample-idx{
+    font-family:var(--font-mono);
+    font-size:11px;
+    color:var(--text-faint);
+    width:20px;
+  }
+  .sample-item .sample-vals{
+    display:flex;gap:18px;flex:1;flex-wrap:wrap;
+  }
+  .sample-vals .sv{display:flex;flex-direction:column;}
+  .sample-vals .sv .n{font-family:var(--font-mono);font-size:15px;font-weight:700;}
+  .sample-vals .sv .l{font-size:9.5px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.05em;}
+  .del-sample{
+    background:none;border:none;color:var(--text-faint);
+    font-size:16px;padding:4px 6px;
+  }
+  .del-sample:hover{color:var(--red);}
+
+  /* ---------- modal ---------- */
+  .modal-backdrop{
+    position:fixed;inset:0;
+    background:rgba(10,9,8,.65);
+    display:flex;align-items:flex-end;justify-content:center;
+    z-index:50;
+  }
+  @media(min-width:640px){
+    .modal-backdrop{align-items:center;}
+  }
+  .modal-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px 16px 0 0;
+    width:100%;
+    max-width:420px;
+    padding:24px 22px 26px;
+  }
+  @media(min-width:640px){
+    .modal-card{border-radius:16px;}
+  }
+  .modal-card h3{
+    font-family:var(--font-display);
+    font-size:18px;
+    margin:0 0 18px;
+  }
+  .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .modal-actions .btn{flex:1;}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    padding:11px 18px;
+    border-radius:8px;
+    font-size:13px;
+    z-index:60;
+    display:flex;align-items:center;gap:8px;
+  }
+  .toast .dot{width:7px;height:7px;border-radius:50%;background:var(--green);}
+
+  @media(max-width:420px){
+    .form-grid{grid-template-columns:1fr;}
+    .summary-row{grid-template-columns:1fr;}
+    .readout .digits{font-size:28px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ APP SCREEN ============ -->
+<div id="app-screen">
+
+  <!-- LOADS LIST VIEW -->
+  <div id="view-loads">
+    <div class="app-header">
+      <div class="left">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px 1px var(--amber-glow);"></div>
+        <h2>Coal Load QC</h2>
+      </div>
+      <div class="conn-chip"><span class="cdot"></span><span id="conn-label">Connecting…</span></div>
+    </div>
+    <div class="container">
+      <div class="toolbar">
+        <input type="text" class="search-input" id="search-input" placeholder="Search vehicle number…" />
+        <button class="fab-add" id="open-new-load">+ New Load</button>
+      </div>
+      <div id="loads-list"></div>
+    </div>
+  </div>
+
+  <!-- LOAD DETAIL VIEW -->
+  <div id="view-load-detail" class="hidden">
+    <div class="app-header">
+      <div class="left">
+        <button class="back-btn" id="back-to-list">←</button>
+        <h2 id="detail-header-title">Load</h2>
+      </div>
+      <button class="btn-danger-ghost btn" id="delete-load-btn">Delete load</button>
+    </div>
+    <div class="container">
+      <div class="detail-head">
+        <div>
+          <div class="vehicle-big" id="detail-vehicle"></div>
+        </div>
+        <span class="badge" id="detail-badge"></span>
+      </div>
+
+      <div class="summary-row">
+        <div class="readout">
+          <div class="label">Avg Dust %</div>
+          <div class="digits" id="summary-dust">— <span class="unit">%</span></div>
+          <div class="sub" id="summary-dust-sub">from 1st samples</div>
+        </div>
+        <div class="readout teal">
+          <div class="label">Avg Non-Carbon %</div>
+          <div class="digits" id="summary-nc">— <span class="unit">%</span></div>
+          <div class="sub" id="summary-nc-sub">all samples</div>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="first" id="tab-first">1st Sample<span class="tab-count" id="count-first">0</span></button>
+        <button class="tab-btn" data-tab="other" id="tab-other">Other Samples<span class="tab-count" id="count-other">0</span></button>
+      </div>
+
+      <!-- 1ST SAMPLE TAB -->
+      <div id="panel-first">
+        <div class="add-sample-card card">
+          <h3>+ Add 1st Sample</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label>Bag Weight (kg)</label>
+              <input type="number" step="0.01" id="f-bagWeight" placeholder="e.g. 15" />
+            </div>
+            <div class="field">
+              <label>Dust Weight (g)</label>
+              <input type="number" step="0.1" id="f-dustWeight" placeholder="e.g. 345" />
+            </div>
+            <div class="field">
+              <label>Non-Carbon Sample Wt (kg)</label>
+              <input type="number" step="0.01" id="f-ncSampleWeight" placeholder="e.g. 10" />
+            </div>
+            <div class="field">
+              <label>Non-Carbon Weight (g)</label>
+              <input type="number" step="0.1" id="f-ncWeight" placeholder="e.g. 60" />
+            </div>
+          </div>
+          <div class="live-preview">
+            <span class="lp-label">Dust %</span>
+            <span class="lp-value" id="f-dust-preview">—</span>
+          </div>
+          <div class="live-preview">
+            <span class="lp-label">Non-Carbon %</span>
+            <span class="lp-value teal" id="f-nc-preview">—</span>
+          </div>
+          <button class="btn btn-primary" id="save-first-sample">Save 1st Sample</button>
+        </div>
+        <div id="first-samples-list"></div>
+      </div>
+
+      <!-- OTHER SAMPLES TAB -->
+      <div id="panel-other" class="hidden">
+        <div class="add-sample-card card">
+          <h3>+ Add Other Sample <span style="color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0;">(1 kg)</span></h3>
+          <div class="form-grid">
+            <div class="field" style="grid-column:1/-1;">
+              <label>Non-Carbon Weight (g)</label>
+              <input type="number" step="0.1" id="o-ncWeight" placeholder="e.g. 60" />
+            </div>
+          </div>
+          <div class="live-preview">
+            <span class="lp-label">Non-Carbon %</span>
+            <span class="lp-value teal" id="o-nc-preview">—</span>
+          </div>
+          <button class="btn btn-primary" id="save-other-sample">Save Other Sample</button>
+        </div>
+        <div id="other-samples-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NEW LOAD MODAL -->
+<div id="new-load-modal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <h3>New Load</h3>
+    <div class="field">
+      <label>Vehicle Number</label>
+      <input type="text" id="nl-vehicle" placeholder="e.g. 41-5678" />
+    </div>
+    <div class="field">
+      <label>Coal Type</label>
+      <select id="nl-coaltype">
+        <option value="Lump">Lump</option>
+        <option value="Crushed">Crushed</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="nl-cancel">Cancel</button>
+      <button class="btn btn-primary" id="nl-create">Create Load</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"><div class="dot"></div><span id="toast-text"></span></div>
+
+<script type="module">
+/* =========================================================================
+   FIREBASE CONFIG — replace with YOUR project's config from Firebase Console
+   No login is used — anyone with the site link can read/write data.
+   Keep the link private within your team.
+   ========================================================================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  onSnapshot, query, orderBy, serverTimestamp, increment, writeBatch, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDTcXgTXdPmq3FW_NkB7baGKmry0bjZX-I",
+  authDomain: "coal-load-qc.firebaseapp.com",
+  projectId: "coal-load-qc",
+  storageBucket: "coal-load-qc.firebasestorage.app",
+  messagingSenderId: "860929485410",
+  appId: "1:860929485410:web:ee9cb5145afeeda7f37f3b",
+  measurementId: "G-Y7YXXPPQLL"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ------------------------------------------------------------------------
+   DOM refs
+   ------------------------------------------------------------------------ */
+const $ = (id) => document.getElementById(id);
+
+const viewLoads = $('view-loads');
+const viewLoadDetail = $('view-load-detail');
+const loadsListEl = $('loads-list');
+const searchInput = $('search-input');
+
+let currentLoadId = null;
+let currentLoadData = null;
+let allLoads = []; // cached for search filtering
+let unsubLoads = null;
+let unsubFirst = null;
+let unsubOther = null;
+let unsubLoadDoc = null;
+
+/* ------------------------------------------------------------------------
+   Utilities
+   ------------------------------------------------------------------------ */
+function showToast(msg){
+  $('toast-text').textContent = msg;
+  $('toast').classList.remove('hidden');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> $('toast').classList.add('hidden'), 2200);
+}
+
+function fmtPct(n){
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toFixed(2);
+}
+
+function calcDustPercent(bagWeightKg, dustG){
+  if (!bagWeightKg) return null;
+  return dustG / (bagWeightKg * 10);
+}
+function calcNcPercentFirst(ncSampleKg, ncG){
+  if (!ncSampleKg) return null;
+  return ncG / (ncSampleKg * 10);
+}
+function calcNcPercentOther(ncG){
+  // fixed 1kg sample -> divide by 10
+  return ncG / 10;
+}
+
+/* ------------------------------------------------------------------------
+   BOOT — no auth, start straight away
+   ------------------------------------------------------------------------ */
+startLoadsListener();
+
+/* ------------------------------------------------------------------------
+   NAVIGATION
+   ------------------------------------------------------------------------ */
+function showLoadsView(){
+  viewLoadDetail.classList.add('hidden');
+  viewLoads.classList.remove('hidden');
+  currentLoadId = null;
+  currentLoadData = null;
+  if (unsubFirst) unsubFirst();
+  if (unsubOther) unsubOther();
+  if (unsubLoadDoc) unsubLoadDoc();
+}
+
+function showDetailView(loadId, loadData){
+  currentLoadId = loadId;
+  currentLoadData = loadData;
+  viewLoads.classList.add('hidden');
+  viewLoadDetail.classList.remove('hidden');
+  renderDetailHeader();
+  switchTab('first');
+  startSampleListeners(loadId);
+  clearFormInputs();
+}
+
+$('back-to-list').addEventListener('click', showLoadsView);
+
+/* ------------------------------------------------------------------------
+   LOADS LIST
+   ------------------------------------------------------------------------ */
+function startLoadsListener(){
+  const q = query(collection(db,'loads'), orderBy('createdAt','desc'));
+  onSnapshot(q, (snap)=>{
+    $('conn-label').textContent = 'Connected';
+    allLoads = [];
+    snap.forEach(d=> allLoads.push({ id:d.id, ...d.data() }));
+    renderLoadsList();
+  }, (err)=>{
+    console.error(err);
+    $('conn-label').textContent = 'Connection error — check firebaseConfig';
+  });
+}
+
+function renderLoadsList(){
+  const term = searchInput.value.trim().toLowerCase();
+  const filtered = term
+    ? allLoads.filter(l => (l.vehicleNumber||'').toLowerCase().includes(term))
+    : allLoads;
+
+  if (filtered.length === 0){
+    loadsListEl.innerHTML = `
+      <div class="empty-state">
+        <div class="big">🚛</div>
+        <div style="font-family:var(--font-display);font-size:15px;color:var(--text-dim);">No loads yet</div>
+        <p>Tap "+ New Load" to record your first vehicle.</p>
+      </div>`;
+    return;
+  }
+
+  loadsListEl.innerHTML = filtered.map(l=>{
+    const firstCount = l.firstCount || 0;
+    const otherCount = l.otherCount || 0;
+    const avgDust = firstCount > 0 ? (l.firstDustSum||0)/firstCount : null;
+    const totalNcCount = firstCount + otherCount;
+    const avgNc = totalNcCount > 0 ? ((l.firstNcSum||0)+(l.otherNcSum||0))/totalNcCount : null;
+    const badgeClass = l.coalType === 'Lump' ? 'badge-lump' : 'badge-crushed';
+    const dateStr = l.createdAt?.toDate ? l.createdAt.toDate().toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
+    return `
+    <div class="load-card card" data-id="${l.id}">
+      <div class="info">
+        <div class="vehicle">${escapeHtml(l.vehicleNumber||'')}</div>
+        <span class="badge ${badgeClass}">${l.coalType}</span>
+        <div class="meta">${dateStr} · ${firstCount} 1st · ${otherCount} other</div>
+      </div>
+      <div class="stats">
+        <div class="stat-mini"><span class="v">${fmtPct(avgDust)}</span><span class="l">Dust%</span></div>
+        <div class="stat-mini"><span class="v" style="color:var(--teal)">${fmtPct(avgNc)}</span><span class="l">NC%</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  loadsListEl.querySelectorAll('.load-card').forEach(card=>{
+    card.addEventListener('click', ()=>{
+      const id = card.dataset.id;
+      const data = allLoads.find(l=>l.id===id);
+      showDetailView(id, data);
+    });
+  });
+}
+
+searchInput.addEventListener('input', renderLoadsList);
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ------------------------------------------------------------------------
+   NEW LOAD MODAL
+   ------------------------------------------------------------------------ */
+$('open-new-load').addEventListener('click', ()=>{
+  $('nl-vehicle').value = '';
+  $('nl-coaltype').value = 'Lump';
+  $('new-load-modal').classList.remove('hidden');
+  setTimeout(()=> $('nl-vehicle').focus(), 50);
+});
+$('nl-cancel').addEventListener('click', ()=> $('new-load-modal').classList.add('hidden'));
+
+$('nl-create').addEventListener('click', async ()=>{
+  const vehicleNumber = $('nl-vehicle').value.trim();
+  const coalType = $('nl-coaltype').value;
+  if (!vehicleNumber){ showToast('Enter a vehicle number'); return; }
+  $('nl-create').disabled = true;
+  try{
+    await addDoc(collection(db,'loads'), {
+      vehicleNumber, coalType,
+      createdAt: serverTimestamp(),
+      firstCount: 0, firstDustSum: 0, firstNcSum: 0,
+      otherCount: 0, otherNcSum: 0
+    });
+    $('new-load-modal').classList.add('hidden');
+    showToast('Load created');
+  }catch(err){
+    console.error(err);
+    showToast('Failed to create load');
+  }finally{
+    $('nl-create').disabled = false;
+  }
+});
+
+/* ------------------------------------------------------------------------
+   LOAD DETAIL — header + summary
+   ------------------------------------------------------------------------ */
+function renderDetailHeader(){
+  $('detail-header-title').textContent = currentLoadData.vehicleNumber;
+  $('detail-vehicle').textContent = currentLoadData.vehicleNumber;
+  const badge = $('detail-badge');
+  badge.textContent = currentLoadData.coalType;
+  badge.className = 'badge ' + (currentLoadData.coalType === 'Lump' ? 'badge-lump' : 'badge-crushed');
+  renderSummary();
+}
+
+function renderSummary(){
+  const d = currentLoadData;
+  const firstCount = d.firstCount || 0;
+  const otherCount = d.otherCount || 0;
+  const avgDust = firstCount > 0 ? (d.firstDustSum||0)/firstCount : null;
+  const totalCount = firstCount + otherCount;
+  const avgNc = totalCount > 0 ? ((d.firstNcSum||0)+(d.otherNcSum||0))/totalCount : null;
+  $('summary-dust').innerHTML = fmtPct(avgDust) + ' <span class="unit">%</span>';
+  $('summary-nc').innerHTML = fmtPct(avgNc) + ' <span class="unit">%</span>';
+  $('summary-dust-sub').textContent = `from ${firstCount} 1st sample${firstCount!==1?'s':''}`;
+  $('summary-nc-sub').textContent = `from ${totalCount} sample${totalCount!==1?'s':''} total`;
+  $('count-first').textContent = firstCount;
+  $('count-other').textContent = otherCount;
+}
+
+$('delete-load-btn').addEventListener('click', async ()=>{
+  if (!confirm(`Delete load ${currentLoadData.vehicleNumber}? This removes all its samples too.`)) return;
+  try{
+    const firstSnap = await getDocs(collection(db,'loads',currentLoadId,'firstSamples'));
+    const otherSnap = await getDocs(collection(db,'loads',currentLoadId,'otherSamples'));
+    const batch = writeBatch(db);
+    firstSnap.forEach(d=> batch.delete(d.ref));
+    otherSnap.forEach(d=> batch.delete(d.ref));
+    batch.delete(doc(db,'loads',currentLoadId));
+    await batch.commit();
+    showToast('Load deleted');
+    showLoadsView();
+  }catch(err){
+    console.error(err);
+    showToast('Failed to delete load');
+  }
+});
+
+/* ------------------------------------------------------------------------
+   TABS
+   ------------------------------------------------------------------------ */
+function switchTab(tab){
+  $('tab-first').classList.toggle('active', tab==='first');
+  $('tab-other').classList.toggle('active', tab==='other');
+  $('panel-first').classList.toggle('hidden', tab!=='first');
+  $('panel-other').classList.toggle('hidden', tab!=='other');
+}
+$('tab-first').addEventListener('click', ()=> switchTab('first'));
+$('tab-other').addEventListener('click', ()=> switchTab('other'));
+
+/* ------------------------------------------------------------------------
+   SAMPLE LISTENERS
+   ------------------------------------------------------------------------ */
+function startSampleListeners(loadId){
+  if (unsubFirst) unsubFirst();
+  if (unsubOther) unsubOther();
+  if (unsubLoadDoc) unsubLoadDoc();
+
+  const q1 = query(collection(db,'loads',loadId,'firstSamples'), orderBy('createdAt','asc'));
+  unsubFirst = onSnapshot(q1, (snap)=>{
+    const items = [];
+    snap.forEach(d=> items.push({id:d.id, ...d.data()}));
+    renderFirstSamples(items);
+  });
+
+  const q2 = query(collection(db,'loads',loadId,'otherSamples'), orderBy('createdAt','asc'));
+  unsubOther = onSnapshot(q2, (snap)=>{
+    const items = [];
+    snap.forEach(d=> items.push({id:d.id, ...d.data()}));
+    renderOtherSamples(items);
+  });
+
+  const loadRef = doc(db,'loads',loadId);
+  unsubLoadDoc = onSnapshot(loadRef, (d)=>{
+    if (!d.exists()) return;
+    currentLoadData = d.data();
+    renderSummary();
+  });
+}
+
+function renderFirstSamples(items){
+  const list = $('first-samples-list');
+  if (items.length === 0){
+    list.innerHTML = `<div class="empty-state"><p>No 1st samples yet.</p></div>`;
+    return;
+  }
+  list.innerHTML = items.map((s,i)=>`
+    <div class="sample-item card">
+      <span class="sample-idx">#${i+1}</span>
+      <div class="sample-vals">
+        <div class="sv"><span class="n">${s.bagWeight}kg</span><span class="l">Bag</span></div>
+        <div class="sv"><span class="n">${s.dustWeight}g</span><span class="l">Dust</span></div>
+        <div class="sv"><span class="n" style="color:var(--amber)">${fmtPct(s.dustPercent)}%</span><span class="l">Dust%</span></div>
+        <div class="sv"><span class="n">${s.ncWeight}g / ${s.ncSampleWeight}kg</span><span class="l">NC sample</span></div>
+        <div class="sv"><span class="n" style="color:var(--teal)">${fmtPct(s.ncPercent)}%</span><span class="l">NC%</span></div>
+      </div>
+      <button class="del-sample" data-id="${s.id}" data-type="first" title="Delete">✕</button>
+    </div>
+  `).join('');
+  attachDeleteHandlers();
+}
+
+function renderOtherSamples(items){
+  const list = $('other-samples-list');
+  if (items.length === 0){
+    list.innerHTML = `<div class="empty-state"><p>No other samples yet.</p></div>`;
+    return;
+  }
+  list.innerHTML = items.map((s,i)=>`
+    <div class="sample-item card">
+      <span class="sample-idx">#${i+1}</span>
+      <div class="sample-vals">
+        <div class="sv"><span class="n">1 kg</span><span class="l">Sample</span></div>
+        <div class="sv"><span class="n">${s.ncWeight}g</span><span class="l">NC weight</span></div>
+        <div class="sv"><span class="n" style="color:var(--teal)">${fmtPct(s.ncPercent)}%</span><span class="l">NC%</span></div>
+      </div>
+      <button class="del-sample" data-id="${s.id}" data-type="other" title="Delete">✕</button>
+    </div>
+  `).join('');
+  attachDeleteHandlers();
+}
+
+function attachDeleteHandlers(){
+  document.querySelectorAll('.del-sample').forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = btn.dataset.id;
+      const type = btn.dataset.type;
+      if (!confirm('Delete this sample?')) return;
+      try{
+        const subcol = type === 'first' ? 'firstSamples' : 'otherSamples';
+        const sampleRef = doc(db,'loads',currentLoadId,subcol,id);
+        const snap = await getDocs(query(collection(db,'loads',currentLoadId,subcol)));
+        let sampleData = null;
+        snap.forEach(d=>{ if (d.id === id) sampleData = d.data(); });
+        if (!sampleData) return;
+
+        const batch = writeBatch(db);
+        batch.delete(sampleRef);
+        const loadRef = doc(db,'loads',currentLoadId);
+        if (type === 'first'){
+          batch.update(loadRef, {
+            firstCount: increment(-1),
+            firstDustSum: increment(-(sampleData.dustPercent||0)),
+            firstNcSum: increment(-(sampleData.ncPercent||0))
+          });
+        } else {
+          batch.update(loadRef, {
+            otherCount: increment(-1),
+            otherNcSum: increment(-(sampleData.ncPercent||0))
+          });
+        }
+        await batch.commit();
+        showToast('Sample deleted');
+      }catch(err){
+        console.error(err);
+        showToast('Failed to delete sample');
+      }
+    };
+  });
+}
+
+/* ------------------------------------------------------------------------
+   ADD SAMPLE — 1st sample
+   ------------------------------------------------------------------------ */
+function clearFormInputs(){
+  ['f-bagWeight','f-dustWeight','f-ncSampleWeight','f-ncWeight','o-ncWeight'].forEach(id=> $(id).value = '');
+  updateFirstPreview();
+  updateOtherPreview();
+}
+
+function updateFirstPreview(){
+  const bag = parseFloat($('f-bagWeight').value);
+  const dust = parseFloat($('f-dustWeight').value);
+  const ncSample = parseFloat($('f-ncSampleWeight').value);
+  const nc = parseFloat($('f-ncWeight').value);
+  const dustPct = (bag && !isNaN(dust)) ? calcDustPercent(bag, dust) : null;
+  const ncPct = (ncSample && !isNaN(nc)) ? calcNcPercentFirst(ncSample, nc) : null;
+  $('f-dust-preview').textContent = dustPct !== null ? fmtPct(dustPct) + '%' : '—';
+  $('f-nc-preview').textContent = ncPct !== null ? fmtPct(ncPct) + '%' : '—';
+}
+['f-bagWeight','f-dustWeight','f-ncSampleWeight','f-ncWeight'].forEach(id=>{
+  $(id).addEventListener('input', updateFirstPreview);
+});
+
+$('save-first-sample').addEventListener('click', async ()=>{
+  const bagWeight = parseFloat($('f-bagWeight').value);
+  const dustWeight = parseFloat($('f-dustWeight').value);
+  const ncSampleWeight = parseFloat($('f-ncSampleWeight').value);
+  const ncWeight = parseFloat($('f-ncWeight').value);
+
+  if (!bagWeight || isNaN(dustWeight) || !ncSampleWeight || isNaN(ncWeight)){
+    showToast('Fill in all 4 fields');
+    return;
+  }
+  const dustPercent = calcDustPercent(bagWeight, dustWeight);
+  const ncPercent = calcNcPercentFirst(ncSampleWeight, ncWeight);
+
+  const btn = $('save-first-sample');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const batch = writeBatch(db);
+    const newRef = doc(collection(db,'loads',currentLoadId,'firstSamples'));
+    batch.set(newRef, {
+      bagWeight, dustWeight, dustPercent,
+      ncSampleWeight, ncWeight, ncPercent,
+      createdAt: serverTimestamp()
+    });
+    const loadRef = doc(db,'loads',currentLoadId);
+    batch.update(loadRef, {
+      firstCount: increment(1),
+      firstDustSum: increment(dustPercent),
+      firstNcSum: increment(ncPercent)
+    });
+    await batch.commit();
+    clearFormInputs();
+    showToast('1st sample saved');
+  }catch(err){
+    console.error(err);
+    showToast('Failed to save sample');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save 1st Sample';
+  }
+});
+
+/* ------------------------------------------------------------------------
+   ADD SAMPLE — other sample
+   ------------------------------------------------------------------------ */
+function updateOtherPreview(){
+  const nc = parseFloat($('o-ncWeight').value);
+  const pct = !isNaN(nc) ? calcNcPercentOther(nc) : null;
+  $('o-nc-preview').textContent = pct !== null ? fmtPct(pct) + '%' : '—';
+}
+$('o-ncWeight').addEventListener('input', updateOtherPreview);
+
+$('save-other-sample').addEventListener('click', async ()=>{
+  const ncWeight = parseFloat($('o-ncWeight').value);
+  if (isNaN(ncWeight)){ showToast('Enter non-carbon weight'); return; }
+  const ncPercent = calcNcPercentOther(ncWeight);
+
+  const btn = $('save-other-sample');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    const batch = writeBatch(db);
+    const newRef = doc(collection(db,'loads',currentLoadId,'otherSamples'));
+    batch.set(newRef, {
+      ncWeight, ncPercent,
+      createdAt: serverTimestamp()
+    });
+    const loadRef = doc(db,'loads',currentLoadId);
+    batch.update(loadRef, {
+      otherCount: increment(1),
+      otherNcSum: increment(ncPercent)
+    });
+    await batch.commit();
+    clearFormInputs();
+    showToast('Other sample saved');
+  }catch(err){
+    console.error(err);
+    showToast('Failed to save sample');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Save Other Sample';
+  }
+});
+</script>
+</body>
+  </html>
