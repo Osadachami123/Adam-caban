@@ -502,10 +502,23 @@
   .suggest-item .sname{color:var(--text-faint);font-size:12px;}
   .suggest-item:active{background:var(--surface);}
 
+  .summary-modal-text{
+    white-space:pre-wrap;
+    font-family:var(--font-mono);
+    font-size:13.5px;
+    line-height:1.7;
+    color:var(--text);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:14px 16px;
+    max-height:340px;
+    overflow-y:auto;
+    margin:14px 0;
+  }
+
   @media(max-width:420px){
-    .form-grid{grid-template-columns:1fr;}
-    .summary-row{grid-template-columns:1fr;}
-    .readout .digits{font-size:28px;}
+    .readout .digits{font-size:24px;}
   }
 </style>
 </head>
@@ -552,7 +565,10 @@
         <div>
           <div class="vehicle-big" id="detail-vehicle"></div>
         </div>
-        <span class="badge" id="detail-badge"></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button class="icon-btn" id="view-summary-btn" title="Summary">📋</button>
+          <span class="badge" id="detail-badge"></span>
+        </div>
       </div>
 
       <div class="summary-row">
@@ -675,6 +691,18 @@
   </div>
 </div>
 
+<!-- LOAD SUMMARY MODAL -->
+<div id="summary-modal" class="modal-backdrop hidden">
+  <div class="modal-card">
+    <h3>Load Summary</h3>
+    <div id="summary-modal-body" class="summary-modal-text"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="summary-close">Close</button>
+      <button class="btn btn-primary" id="summary-copy">Copy</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"><div class="dot"></div><span id="toast-text"></span></div>
 
 <script type="module">
@@ -720,6 +748,8 @@ let unsubLoads = null;
 let unsubFirst = null;
 let unsubOther = null;
 let unsubLoadDoc = null;
+let currentFirstSamples = [];
+let currentOtherSamples = [];
 
 /* ------------------------------------------------------------------------
    Utilities
@@ -1062,6 +1092,56 @@ $('delete-load-btn').addEventListener('click', async ()=>{
   }
 });
 
+function buildSummaryText(){
+  const d = currentLoadData;
+  const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
+  const dateStr = created.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const timeStr = created.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+
+  const dustLines = currentFirstSamples.length
+    ? currentFirstSamples.map((s,i)=> `  ${i+1}) ${fmtPct(s.dustPercent)}%`).join('\n')
+    : '  —';
+
+  const ncValues = [
+    ...currentFirstSamples.map(s=>s.ncPercent),
+    ...currentOtherSamples.map(s=>s.ncPercent)
+  ];
+  const ncLines = ncValues.length
+    ? ncValues.map((v,i)=> `  ${i+1}) ${fmtPct(v)}%`).join('\n')
+    : '  —';
+  const firstCount = d.firstCount || 0;
+  const otherCount = d.otherCount || 0;
+  const totalCount = firstCount + otherCount;
+  const avgNc = totalCount > 0 ? ((d.firstNcSum||0)+(d.otherNcSum||0))/totalCount : null;
+
+  return `Date: ${dateStr}
+Time: ${timeStr}
+Vehicle: ${d.vehicleNumber}${d.returned ? '  (Returned)' : ''}
+
+Dust %:
+${dustLines}
+
+Non-Carbon %:
+${ncLines}
+
+Average Non-Carbon %: ${avgNc!=null ? fmtPct(avgNc)+'%' : '—'}`;
+}
+
+$('view-summary-btn').addEventListener('click', ()=>{
+  $('summary-modal-body').textContent = buildSummaryText();
+  $('summary-modal').classList.remove('hidden');
+});
+$('summary-close').addEventListener('click', ()=> $('summary-modal').classList.add('hidden'));
+$('summary-copy').addEventListener('click', async ()=>{
+  const text = $('summary-modal-body').textContent;
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Copied');
+  }catch(err){
+    showToast('Copy failed — select text manually');
+  }
+});
+
 $('return-load-btn').addEventListener('click', async ()=>{
   const isReturned = !!currentLoadData.returned;
   const msg = isReturned
@@ -1124,6 +1204,7 @@ function startSampleListeners(loadId){
 }
 
 function renderFirstSamples(items){
+  currentFirstSamples = items;
   const list = $('first-samples-list');
   if (items.length === 0){
     list.innerHTML = `<div class="empty-state"><p>No 1st samples yet.</p></div>`;
@@ -1146,6 +1227,7 @@ function renderFirstSamples(items){
 }
 
 function renderOtherSamples(items){
+  currentOtherSamples = items;
   const list = $('other-samples-list');
   if (items.length === 0){
     list.innerHTML = `<div class="empty-state"><p>No other samples yet.</p></div>`;
@@ -1308,4 +1390,4 @@ $('save-other-sample').addEventListener('click', async ()=>{
 });
 </script>
 </body>
-</html>
+  </html>
