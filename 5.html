@@ -438,6 +438,18 @@
   .badge-returned{
     background:rgba(229,89,95,.14);color:var(--red);border:1px solid rgba(229,89,95,.35);
   }
+  .returned-flag{
+    display:inline-flex;align-items:center;gap:3px;
+    font-family:var(--font-body);
+    font-size:10.5px;font-weight:700;
+    color:var(--red);
+    background:rgba(229,89,95,.14);
+    border:1px solid rgba(229,89,95,.35);
+    padding:2px 7px;
+    border-radius:20px;
+    margin-left:6px;
+    vertical-align:middle;
+  }
 
   /* ---------- return load button ---------- */
   .btn-return-ghost{
@@ -467,6 +479,28 @@
   .vehicle-row .vdel{background:none;border:none;color:var(--text-faint);font-size:15px;padding:4px 6px;}
   .vehicle-row .vdel:hover{color:var(--red);}
   .vehicle-add-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+  /* ---------- custom vehicle-number suggestion dropdown (mobile-safe, no native datalist) ---------- */
+  .suggest-dropdown{
+    position:absolute;
+    top:100%;left:0;right:0;
+    margin-top:5px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    max-height:180px;
+    overflow-y:auto;
+    z-index:15;
+  }
+  .suggest-item{
+    padding:10px 13px;
+    font-size:14px;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .suggest-item:last-child{border-bottom:none;}
+  .suggest-item .sname{color:var(--text-faint);font-size:12px;}
+  .suggest-item:active{background:var(--surface);}
 
   @media(max-width:420px){
     .form-grid{grid-template-columns:1fr;}
@@ -600,10 +634,10 @@
 <div id="new-load-modal" class="modal-backdrop hidden">
   <div class="modal-card">
     <h3>New Load</h3>
-    <div class="field">
+    <div class="field" style="position:relative;">
       <label>Vehicle Number</label>
-      <input type="text" id="nl-vehicle" placeholder="e.g. 41-5678" list="vehicle-suggestions" autocomplete="off" />
-      <datalist id="vehicle-suggestions"></datalist>
+      <input type="text" id="nl-vehicle" placeholder="e.g. 41-5678" autocomplete="off" />
+      <div class="suggest-dropdown hidden" id="nl-vehicle-suggestions"></div>
     </div>
     <div class="field">
       <label>Coal Type</label>
@@ -796,9 +830,8 @@ function renderLoadsList(){
     return `
     <div class="load-card card" data-id="${l.id}">
       <div class="info">
-        <div class="vehicle">${escapeHtml(l.vehicleNumber||'')}${driverName ? ` <span class="driver-tag">${escapeHtml(driverName)}</span>` : ''}</div>
+        <div class="vehicle">${escapeHtml(l.vehicleNumber||'')}${driverName ? ` <span class="driver-tag">${escapeHtml(driverName)}</span>` : ''}${l.returned ? ' <span class="returned-flag">↩ Returned</span>' : ''}</div>
         <span class="badge ${badgeClass}">${l.coalType}</span>
-        ${l.returned ? '<span class="badge badge-returned">Returned</span>' : ''}
         <div class="meta">${dateStr} · ${firstCount} 1st · ${otherCount} other</div>
       </div>
       <div class="stats">
@@ -833,17 +866,49 @@ function startVehiclesListener(){
   onSnapshot(q, (snap)=>{
     allVehicles = [];
     snap.forEach(d=> allVehicles.push({ id:d.id, ...d.data() }));
-    renderVehicleSuggestions();
     renderVehiclesList();
     renderLoadsList(); // refresh driver-name tags on cards
   }, (err)=> console.error(err));
 }
 
-function renderVehicleSuggestions(){
-  $('vehicle-suggestions').innerHTML = allVehicles
-    .map(v=> `<option value="${escapeHtml(v.vehicleNumber)}">`)
-    .join('');
+/* Custom suggestion dropdown for the New Load vehicle-number field.
+   (Native <datalist> is unreliable on mobile browsers, especially iOS Safari,
+   so this is done by hand with a plain absolutely-positioned list.) */
+function renderNlVehicleSuggestions(){
+  const box = $('nl-vehicle-suggestions');
+  const term = $('nl-vehicle').value.trim().toLowerCase();
+  const matches = term
+    ? allVehicles.filter(v => (v.vehicleNumber||'').toLowerCase().includes(term))
+    : allVehicles;
+
+  if (matches.length === 0){
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  box.innerHTML = matches.map(v => `
+    <div class="suggest-item" data-num="${escapeHtml(v.vehicleNumber)}">
+      <span>${escapeHtml(v.vehicleNumber)}</span>
+      <span class="sname">${escapeHtml(v.driverName||'')}</span>
+    </div>
+  `).join('');
+  box.classList.remove('hidden');
+  box.querySelectorAll('.suggest-item').forEach(item=>{
+    // mousedown (not click) fires before the input's blur hides the box
+    item.addEventListener('mousedown', (e)=>{
+      e.preventDefault();
+      $('nl-vehicle').value = item.dataset.num;
+      box.classList.add('hidden');
+    });
+  });
 }
+$('nl-vehicle').addEventListener('input', renderNlVehicleSuggestions);
+$('nl-vehicle').addEventListener('focus', renderNlVehicleSuggestions);
+document.addEventListener('click', (e)=>{
+  if (!e.target.closest('#nl-vehicle') && !e.target.closest('#nl-vehicle-suggestions')){
+    $('nl-vehicle-suggestions').classList.add('hidden');
+  }
+});
 
 function renderVehiclesList(){
   const list = $('vehicle-list');
@@ -868,7 +933,7 @@ function renderVehiclesList(){
         showToast('Removed');
       }catch(err){
         console.error(err);
-        showToast('Failed to remove');
+        showToast('Failed to remove: ' + (err.code || err.message || 'unknown error'));
       }
     };
   });
@@ -896,7 +961,7 @@ $('v-add-save').addEventListener('click', async ()=>{
     showToast('Saved');
   }catch(err){
     console.error(err);
-    showToast('Failed to save');
+    showToast('Failed to save: ' + (err.code || err.message || 'unknown error'));
   }finally{
     btn.disabled = false;
   }
@@ -911,7 +976,10 @@ $('open-new-load').addEventListener('click', ()=>{
   $('new-load-modal').classList.remove('hidden');
   setTimeout(()=> $('nl-vehicle').focus(), 50);
 });
-$('nl-cancel').addEventListener('click', ()=> $('new-load-modal').classList.add('hidden'));
+$('nl-cancel').addEventListener('click', ()=>{
+  $('new-load-modal').classList.add('hidden');
+  $('nl-vehicle-suggestions').classList.add('hidden');
+});
 
 $('nl-create').addEventListener('click', async ()=>{
   const vehicleNumber = $('nl-vehicle').value.trim();
