@@ -435,9 +435,6 @@
     font-size:11px;
     color:var(--text-faint);
   }
-  .badge-returned{
-    background:rgba(229,89,95,.14);color:var(--red);border:1px solid rgba(229,89,95,.35);
-  }
   .returned-flag{
     display:inline-flex;align-items:center;gap:3px;
     font-family:var(--font-body);
@@ -503,19 +500,110 @@
   .suggest-item:active{background:var(--surface);}
 
   .summary-modal-text{
-    white-space:pre-wrap;
-    font-family:var(--font-mono);
-    font-size:13.5px;
-    line-height:1.7;
-    color:var(--text);
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:14px 16px;
-    max-height:340px;
+    max-height:400px;
     overflow-y:auto;
     margin:14px 0;
   }
+
+  .summary-table{
+    width:100%;
+    border-collapse:collapse;
+    font-family:var(--font-mono);
+    font-size:13.5px;
+  }
+  .summary-table + .summary-table{ margin-top:12px; }
+  .summary-table td{
+    border:1px solid var(--border);
+    padding:8px 10px;
+    text-align:center;
+  }
+  .summary-table td.lbl{
+    text-align:left;
+    font-weight:700;
+    width:42%;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    font-size:12px;
+  }
+  .summary-table tr.col-head td{
+    font-weight:700;
+    background:var(--panel);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .summary-table tr.col-head td:first-child{color:var(--amber);}
+  .summary-table tr.col-head td:last-child{color:var(--teal);}
+  .summary-table tr.avg-row td{font-weight:700;}
+  .summary-table tr.avg-row td:last-child{color:var(--teal);}
+
+  /* ---------- print-only area, used for the "Save as PDF" summary ---------- */
+  #print-area{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{
+      display:block !important;
+      position:absolute;top:0;left:0;width:100%;
+      padding:24px;background:#fff;
+    }
+    #print-area, #print-area *{color:#000 !important;border-color:#000 !important;background:#fff !important;}
+    #print-area h2{font-size:18px;margin:0 0 14px;}
+  }
+
+  /* ---------- custom numeric keypad (replaces native mobile keyboard) ---------- */
+  input.kp-input{ caret-color:transparent; cursor:pointer; }
+  .keypad-overlay{
+    position:fixed; inset:0; z-index:300;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .keypad-overlay.hidden{display:none;}
+  .keypad-backdrop{
+    position:absolute; inset:0;
+    background:rgba(0,0,0,.5);
+    opacity:0; transition:opacity .18s ease;
+  }
+  .keypad-overlay.open .keypad-backdrop{opacity:1;}
+  .keypad-sheet{
+    position:relative; width:100%; max-width:460px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-bottom:none;
+    border-radius:16px 16px 0 0;
+    padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));
+    transform:translateY(100%);
+    transition:transform .2s cubic-bezier(.2,.8,.3,1);
+    box-shadow:0 -8px 24px rgba(0,0,0,.35);
+  }
+  .keypad-overlay.open .keypad-sheet{transform:translateY(0);}
+  .keypad-head{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .keypad-label{font-size:12.5px; color:var(--text-faint); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+  .keypad-display{
+    font-family:var(--font-mono); font-size:26px; font-weight:700;
+    color:var(--amber); background:var(--panel);
+    border:1px solid var(--border); border-radius:8px;
+    padding:8px 14px; min-width:110px; text-align:right;
+  }
+  .keypad-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:10px;
+  }
+  .keypad-grid button{
+    background:var(--panel); border:1px solid var(--border); color:var(--text);
+    font-size:20px; font-weight:600; border-radius:10px;
+    height:52px; -webkit-tap-highlight-color:transparent;
+  }
+  .keypad-grid button:active{background:var(--border);}
+  .keypad-grid button.keypad-back{color:var(--red); font-size:18px;}
+  .keypad-actions{display:flex; gap:10px;}
+  .keypad-actions button{
+    flex:1; height:48px; border-radius:10px; font-size:15px; font-weight:700;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .keypad-cancel{background:var(--panel); border:1px solid var(--border); color:var(--text-dim);}
+  .keypad-ok{background:var(--amber); border:none; color:#1a1200;}
 
   @media(max-width:420px){
     .readout .digits{font-size:24px;}
@@ -532,7 +620,7 @@
     <div class="app-header">
       <div class="left">
         <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px 1px var(--amber-glow);"></div>
-        <h2>Charcoal Load QC </h2>
+        <h2>Coal Load QC</h2>
       </div>
       <div class="header-right">
         <button class="icon-btn" id="open-vehicles-btn" title="ලොරි / රියදුරු ලයිස්තුව">🚚</button>
@@ -596,19 +684,19 @@
           <div class="form-grid">
             <div class="field">
               <label>Bag Weight (kg)</label>
-              <input type="number" step="0.01" id="f-bagWeight" placeholder="e.g. 15" />
+              <input type="text" id="f-bagWeight" class="kp-input" readonly inputmode="none" placeholder="e.g. 15" />
             </div>
             <div class="field">
               <label>Dust Weight (g)</label>
-              <input type="number" step="0.1" id="f-dustWeight" placeholder="e.g. 345" />
+              <input type="text" id="f-dustWeight" class="kp-input" readonly inputmode="none" placeholder="e.g. 345" />
             </div>
             <div class="field">
               <label>Non-Carbon Sample Wt (kg)</label>
-              <input type="number" step="0.01" id="f-ncSampleWeight" placeholder="e.g. 10" />
+              <input type="text" id="f-ncSampleWeight" class="kp-input" readonly inputmode="none" placeholder="e.g. 10" />
             </div>
             <div class="field">
               <label>Non-Carbon Weight (g)</label>
-              <input type="number" step="0.1" id="f-ncWeight" placeholder="e.g. 60" />
+              <input type="text" id="f-ncWeight" class="kp-input" readonly inputmode="none" placeholder="e.g. 60" />
             </div>
           </div>
           <div class="live-preview">
@@ -631,7 +719,7 @@
           <div class="form-grid">
             <div class="field" style="grid-column:1/-1;">
               <label>Non-Carbon Weight (g)</label>
-              <input type="number" step="0.1" id="o-ncWeight" placeholder="e.g. 60" />
+              <input type="text" id="o-ncWeight" class="kp-input" readonly inputmode="none" placeholder="e.g. 60" />
             </div>
           </div>
           <div class="live-preview">
@@ -696,14 +784,46 @@
   <div class="modal-card">
     <h3>Load Summary</h3>
     <div id="summary-modal-body" class="summary-modal-text"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="summary-close">Close</button>
-      <button class="btn btn-primary" id="summary-copy">Copy</button>
+    <div class="modal-actions" style="flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="summary-close" style="flex:1 1 45%;">Close</button>
+      <button class="btn btn-ghost" id="summary-copy" style="flex:1 1 45%;">Copy</button>
+      <button class="btn btn-primary" id="summary-pdf" style="flex:1 1 100%;">⬇ Save as PDF</button>
     </div>
   </div>
 </div>
 
+<div id="print-area"></div>
+
 <div id="toast" class="toast hidden"><div class="dot"></div><span id="toast-text"></span></div>
+
+<!-- CUSTOM NUMERIC KEYPAD (replaces native mobile keyboard for weight fields) -->
+<div id="keypad-overlay" class="keypad-overlay hidden">
+  <div class="keypad-backdrop" id="keypad-backdrop"></div>
+  <div class="keypad-sheet">
+    <div class="keypad-head">
+      <span class="keypad-label" id="keypad-label">Bag Weight (kg)</span>
+      <div class="keypad-display" id="keypad-display">0</div>
+    </div>
+    <div class="keypad-grid">
+      <button type="button" data-k="1">1</button>
+      <button type="button" data-k="2">2</button>
+      <button type="button" data-k="3">3</button>
+      <button type="button" data-k="4">4</button>
+      <button type="button" data-k="5">5</button>
+      <button type="button" data-k="6">6</button>
+      <button type="button" data-k="7">7</button>
+      <button type="button" data-k="8">8</button>
+      <button type="button" data-k="9">9</button>
+      <button type="button" data-k=".">.</button>
+      <button type="button" data-k="0">0</button>
+      <button type="button" data-k="back" class="keypad-back">⌫</button>
+    </div>
+    <div class="keypad-actions">
+      <button type="button" class="keypad-cancel" id="keypad-cancel">Cancel</button>
+      <button type="button" class="keypad-ok" id="keypad-ok">OK ✓</button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
 /* =========================================================================
@@ -713,7 +833,7 @@
    ========================================================================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc,
+  getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDoc,
   onSnapshot, query, orderBy, serverTimestamp, increment, writeBatch, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -980,6 +1100,8 @@ $('v-add-save').addEventListener('click', async ()=>{
   const vehicleNumber = $('v-add-number').value.trim();
   const driverName = $('v-add-name').value.trim();
   if (!vehicleNumber || !driverName){ showToast('Lorry number සහ නම දෙකම දාන්න'); return; }
+  const dup = allVehicles.find(v => (v.vehicleNumber||'').toLowerCase() === vehicleNumber.toLowerCase());
+  if (dup){ showToast('මේ ලොරි නම්බරය දැනටමත් ලයිස්තුවේ තියෙනවා'); return; }
   const btn = $('v-add-save');
   btn.disabled = true;
   try{
@@ -1027,7 +1149,7 @@ $('nl-create').addEventListener('click', async ()=>{
     showToast('Load created');
   }catch(err){
     console.error(err);
-    showToast('Failed to create load');
+    showToast('Failed to create load: ' + (err.code || err.message || 'unknown error'));
   }finally{
     $('nl-create').disabled = false;
   }
@@ -1088,35 +1210,56 @@ $('delete-load-btn').addEventListener('click', async ()=>{
     showLoadsView();
   }catch(err){
     console.error(err);
-    showToast('Failed to delete load');
+    showToast('Failed to delete load: ' + (err.code || err.message || 'unknown error'));
   }
 });
 
-function buildSummaryText(){
+function gatherSummaryValues(){
   const d = currentLoadData;
   const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
   const dateStr = created.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-  const timeStr = created.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-
-  const dustLines = currentFirstSamples.length
-    ? currentFirstSamples.map((s,i)=> `  ${i+1}) ${fmtPct(s.dustPercent)}%`).join('\n')
-    : '  —';
-
-  const ncValues = [
+  const dustVals = currentFirstSamples.map(s=>s.dustPercent);
+  const ncVals = [
     ...currentFirstSamples.map(s=>s.ncPercent),
     ...currentOtherSamples.map(s=>s.ncPercent)
   ];
-  const ncLines = ncValues.length
-    ? ncValues.map((v,i)=> `  ${i+1}) ${fmtPct(v)}%`).join('\n')
-    : '  —';
   const firstCount = d.firstCount || 0;
   const otherCount = d.otherCount || 0;
   const totalCount = firstCount + otherCount;
   const avgNc = totalCount > 0 ? ((d.firstNcSum||0)+(d.otherNcSum||0))/totalCount : null;
+  return { d, dateStr, dustVals, ncVals, avgNc };
+}
 
+function buildSummaryTableHTML(){
+  const { d, dateStr, dustVals, ncVals, avgNc } = gatherSummaryValues();
+  const rowCount = Math.max(dustVals.length, ncVals.length, 1);
+  let rows = '';
+  for (let i=0; i<rowCount; i++){
+    const dv = dustVals[i] != null ? fmtPct(dustVals[i]) : '';
+    const nv = ncVals[i] != null ? fmtPct(ncVals[i]) : '';
+    rows += `<tr><td>${dv}</td><td>${nv}</td></tr>`;
+  }
+  return `
+    <table class="summary-table">
+      <tr><td class="lbl">Date</td><td>${dateStr}</td></tr>
+      <tr><td class="lbl">Vehicle No</td><td>${escapeHtml(d.vehicleNumber||'')}${d.returned ? ' (Returned)' : ''}</td></tr>
+      <tr><td class="lbl">Type</td><td>${d.coalType}</td></tr>
+    </table>
+    <table class="summary-table">
+      <tr class="col-head"><td>Dust %</td><td>Non-Carbon %</td></tr>
+      ${rows}
+      <tr class="avg-row"><td></td><td>Avg: ${avgNc!=null ? fmtPct(avgNc)+'%' : '—'}</td></tr>
+    </table>
+  `;
+}
+
+function buildSummaryPlainText(){
+  const { d, dateStr, dustVals, ncVals, avgNc } = gatherSummaryValues();
+  const dustLines = dustVals.length ? dustVals.map((v,i)=> `  ${i+1}) ${fmtPct(v)}%`).join('\n') : '  —';
+  const ncLines = ncVals.length ? ncVals.map((v,i)=> `  ${i+1}) ${fmtPct(v)}%`).join('\n') : '  —';
   return `Date: ${dateStr}
-Time: ${timeStr}
 Vehicle: ${d.vehicleNumber}${d.returned ? '  (Returned)' : ''}
+Type: ${d.coalType}
 
 Dust %:
 ${dustLines}
@@ -1128,18 +1271,21 @@ Average Non-Carbon %: ${avgNc!=null ? fmtPct(avgNc)+'%' : '—'}`;
 }
 
 $('view-summary-btn').addEventListener('click', ()=>{
-  $('summary-modal-body').textContent = buildSummaryText();
+  $('summary-modal-body').innerHTML = buildSummaryTableHTML();
   $('summary-modal').classList.remove('hidden');
 });
 $('summary-close').addEventListener('click', ()=> $('summary-modal').classList.add('hidden'));
 $('summary-copy').addEventListener('click', async ()=>{
-  const text = $('summary-modal-body').textContent;
   try{
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(buildSummaryPlainText());
     showToast('Copied');
   }catch(err){
     showToast('Copy failed — select text manually');
   }
+});
+$('summary-pdf').addEventListener('click', ()=>{
+  $('print-area').innerHTML = `<h2>Coal Load QC — Summary</h2>` + buildSummaryTableHTML();
+  window.print();
 });
 
 $('return-load-btn').addEventListener('click', async ()=>{
@@ -1156,7 +1302,7 @@ $('return-load-btn').addEventListener('click', async ()=>{
     showToast(!isReturned ? 'Marked as returned' : 'Return status removed');
   }catch(err){
     console.error(err);
-    showToast('Failed to update');
+    showToast('Failed to update: ' + (err.code || err.message || 'unknown error'));
   }
 });
 
@@ -1256,10 +1402,9 @@ function attachDeleteHandlers(){
       try{
         const subcol = type === 'first' ? 'firstSamples' : 'otherSamples';
         const sampleRef = doc(db,'loads',currentLoadId,subcol,id);
-        const snap = await getDocs(query(collection(db,'loads',currentLoadId,subcol)));
-        let sampleData = null;
-        snap.forEach(d=>{ if (d.id === id) sampleData = d.data(); });
-        if (!sampleData) return;
+        const snap = await getDoc(sampleRef);
+        if (!snap.exists()) return;
+        const sampleData = snap.data();
 
         const batch = writeBatch(db);
         batch.delete(sampleRef);
@@ -1280,7 +1425,7 @@ function attachDeleteHandlers(){
         showToast('Sample deleted');
       }catch(err){
         console.error(err);
-        showToast('Failed to delete sample');
+        showToast('Failed to delete sample: ' + (err.code || err.message || 'unknown error'));
       }
     };
   });
@@ -1343,7 +1488,7 @@ $('save-first-sample').addEventListener('click', async ()=>{
     showToast('1st sample saved');
   }catch(err){
     console.error(err);
-    showToast('Failed to save sample');
+    showToast('Failed to save sample: ' + (err.code || err.message || 'unknown error'));
   }finally{
     btn.disabled = false; btn.textContent = 'Save 1st Sample';
   }
@@ -1358,6 +1503,85 @@ function updateOtherPreview(){
   $('o-nc-preview').textContent = pct !== null ? fmtPct(pct) + '%' : '—';
 }
 $('o-ncWeight').addEventListener('input', updateOtherPreview);
+
+/* ------------------------------------------------------------------------
+   CUSTOM NUMERIC KEYPAD
+   Bag Weight -> auto-advance -> Dust Weight -> closes (NC check happens later)
+   NC Sample Weight -> auto-advance -> NC Weight -> closes
+   Other-sample NC Weight -> closes
+   ------------------------------------------------------------------------ */
+const KEYPAD_FIELDS = {
+  'f-bagWeight':      { label: 'Bag Weight (kg)',        next: 'f-dustWeight' },
+  'f-dustWeight':     { label: 'Dust Weight (g)',         next: null },
+  'f-ncSampleWeight': { label: 'Non-Carbon Sample Wt (kg)', next: 'f-ncWeight' },
+  'f-ncWeight':       { label: 'Non-Carbon Weight (g)',   next: null },
+  'o-ncWeight':       { label: 'Non-Carbon Weight (g)',   next: null },
+};
+
+let kpTargetId = null;
+let kpValue = '';
+
+function kpUpdateDisplay(){
+  $('keypad-display').textContent = kpValue === '' ? '0' : kpValue;
+}
+
+function openKeypad(fieldId){
+  const cfg = KEYPAD_FIELDS[fieldId];
+  if (!cfg) return;
+  kpTargetId = fieldId;
+  const existing = $(fieldId).value;
+  kpValue = existing ? String(existing) : '';
+  kpUpdateDisplay();
+  $('keypad-label').textContent = cfg.label;
+  const overlay = $('keypad-overlay');
+  overlay.classList.remove('hidden');
+  requestAnimationFrame(()=> overlay.classList.add('open'));
+}
+
+function closeKeypad(){
+  const overlay = $('keypad-overlay');
+  overlay.classList.remove('open');
+  setTimeout(()=> overlay.classList.add('hidden'), 200);
+  kpTargetId = null;
+  kpValue = '';
+}
+
+function kpCommit(){
+  if (!kpTargetId) return;
+  const el = $(kpTargetId);
+  el.value = kpValue;
+  el.dispatchEvent(new Event('input', { bubbles:true }));
+  const next = KEYPAD_FIELDS[kpTargetId].next;
+  if (next){
+    openKeypad(next); // stays open, auto-advances to the next field in the pair
+  } else {
+    closeKeypad(); // end of the pair — close, since the next check happens later
+  }
+}
+
+Object.keys(KEYPAD_FIELDS).forEach(id=>{
+  const el = $(id);
+  if (!el) return;
+  el.addEventListener('click', ()=> openKeypad(id));
+});
+
+$('keypad-overlay').querySelectorAll('.keypad-grid button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const k = btn.dataset.k;
+    if (k === 'back'){
+      kpValue = kpValue.slice(0, -1);
+    } else if (k === '.'){
+      if (!kpValue.includes('.')) kpValue += (kpValue === '' ? '0.' : '.');
+    } else {
+      if (kpValue === '0') kpValue = k; else kpValue += k;
+    }
+    kpUpdateDisplay();
+  });
+});
+
+$('keypad-cancel').addEventListener('click', closeKeypad);
+$('keypad-backdrop').addEventListener('click', closeKeypad);
+$('keypad-ok').addEventListener('click', kpCommit);
 
 $('save-other-sample').addEventListener('click', async ()=>{
   const ncWeight = parseFloat($('o-ncWeight').value);
@@ -1383,11 +1607,11 @@ $('save-other-sample').addEventListener('click', async ()=>{
     showToast('Other sample saved');
   }catch(err){
     console.error(err);
-    showToast('Failed to save sample');
+    showToast('Failed to save sample: ' + (err.code || err.message || 'unknown error'));
   }finally{
     btn.disabled = false; btn.textContent = 'Save Other Sample';
   }
 });
 </script>
 </body>
-  </html>
+</html>
