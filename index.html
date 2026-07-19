@@ -67,13 +67,20 @@
   }
   .app-header .left{display:flex;align-items:center;gap:12px;}
   .back-btn{
-    background:var(--surface);
-    border:1px solid var(--border);
-    color:var(--text-dim);
-    width:34px;height:34px;
+    background:var(--surface-2);
+    border:1px solid var(--text-faint);
+    color:var(--text);
+    width:36px;height:36px;
     border-radius:8px;
     display:flex;align-items:center;justify-content:center;
-    font-size:16px;
+    font-size:19px;
+    font-weight:700;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .back-btn:hover,.back-btn:active{
+    border-color:var(--amber);
+    color:var(--amber);
+    background:var(--surface);
   }
   .app-header h2{
     font-family:var(--font-display);
@@ -825,6 +832,8 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script type="module">
 /* =========================================================================
    FIREBASE CONFIG — replace with YOUR project's config from Firebase Console
@@ -1284,8 +1293,68 @@ $('summary-copy').addEventListener('click', async ()=>{
   }
 });
 $('summary-pdf').addEventListener('click', ()=>{
-  $('print-area').innerHTML = `<h2>Coal Load QC — Summary</h2>` + buildSummaryTableHTML();
-  window.print();
+  const btn = $('summary-pdf');
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try{
+    const { d, dateStr, dustVals, ncVals, avgNc } = gatherSummaryValues();
+    const { jsPDF } = window.jspdf;
+    const pdfDoc = new jsPDF({ unit:'pt', format:'a4' });
+    const marginX = 40;
+    let y = 50;
+
+    pdfDoc.setFont('helvetica','bold');
+    pdfDoc.setFontSize(16);
+    pdfDoc.text('Coal Load QC', marginX, y);
+    y += 14;
+
+    // ---- info block (DATE / VEHICLE NO / TYPE) ----
+    pdfDoc.autoTable({
+      startY: y,
+      margin:{ left:marginX, right:marginX },
+      theme:'grid',
+      styles:{ font:'helvetica', fontSize:12, cellPadding:8, textColor:[0,0,0], lineColor:[0,0,0], lineWidth:0.9 },
+      columnStyles:{ 0:{ fontStyle:'bold', cellWidth:150 } },
+      body:[
+        ['DATE', dateStr],
+        ['VEHICLE NO', (d.vehicleNumber||'') + (d.returned ? ' (Returned)' : '')],
+        ['TYPE', (d.coalType||'').toString().toUpperCase()]
+      ]
+    });
+
+    y = pdfDoc.lastAutoTable.finalY + 22;
+
+    // ---- data block (DUST / NON CABN) ----
+    const rowCount = Math.max(dustVals.length, ncVals.length, 1);
+    const bodyRows = [];
+    for (let i=0;i<rowCount;i++){
+      const dv = dustVals[i] != null ? fmtPct(dustVals[i]) + '%' : '';
+      const nv = ncVals[i] != null ? fmtPct(ncVals[i]) + '%' : '';
+      bodyRows.push([dv, nv]);
+    }
+
+    pdfDoc.autoTable({
+      startY: y,
+      margin:{ left:marginX, right:marginX },
+      theme:'grid',
+      styles:{ font:'helvetica', fontSize:12, cellPadding:8, textColor:[0,0,0], lineColor:[0,0,0], lineWidth:0.9, halign:'center' },
+      head:[[ 'DUST', 'NON CABN' ]],
+      headStyles:{ fillColor:[255,255,255], textColor:[0,0,0], fontStyle:'bold', fontSize:13, lineColor:[0,0,0], lineWidth:0.9 },
+      body: bodyRows,
+      foot:[[ '', avgNc!=null ? `Avg: ${fmtPct(avgNc)}%` : '—' ]],
+      footStyles:{ fillColor:[255,255,255], textColor:[0,0,0], fontStyle:'bold', lineColor:[0,0,0], lineWidth:0.9 }
+    });
+
+    const fileVehicle = (d.vehicleNumber || 'load').toString().replace(/[^a-zA-Z0-9]/g,'_');
+    const fileDate = dateStr.replace(/\s+/g,'_');
+    pdfDoc.save(`CoalLoad_${fileVehicle}_${fileDate}.pdf`);
+    showToast('PDF saved');
+  }catch(err){
+    console.error(err);
+    showToast('PDF එක හදන්න බැරි උනා: ' + (err.message || 'unknown error'));
+  }finally{
+    btn.disabled = false; btn.textContent = originalLabel;
+  }
 });
 
 $('return-load-btn').addEventListener('click', async ()=>{
@@ -1614,4 +1683,4 @@ $('save-other-sample').addEventListener('click', async ()=>{
 });
 </script>
 </body>
-</html>
+  </html>
