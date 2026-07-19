@@ -503,18 +503,55 @@
   .suggest-item:active{background:var(--surface);}
 
   .summary-modal-text{
-    white-space:pre-wrap;
-    font-family:var(--font-mono);
-    font-size:13.5px;
-    line-height:1.7;
-    color:var(--text);
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:14px 16px;
-    max-height:340px;
+    max-height:400px;
     overflow-y:auto;
     margin:14px 0;
+  }
+
+  .summary-table{
+    width:100%;
+    border-collapse:collapse;
+    font-family:var(--font-mono);
+    font-size:13.5px;
+  }
+  .summary-table + .summary-table{ margin-top:12px; }
+  .summary-table td{
+    border:1px solid var(--border);
+    padding:8px 10px;
+    text-align:center;
+  }
+  .summary-table td.lbl{
+    text-align:left;
+    font-weight:700;
+    width:42%;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    font-size:12px;
+  }
+  .summary-table tr.col-head td{
+    font-weight:700;
+    background:var(--panel);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .summary-table tr.col-head td:first-child{color:var(--amber);}
+  .summary-table tr.col-head td:last-child{color:var(--teal);}
+  .summary-table tr.avg-row td{font-weight:700;}
+  .summary-table tr.avg-row td:last-child{color:var(--teal);}
+
+  /* ---------- print-only area, used for the "Save as PDF" summary ---------- */
+  #print-area{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #print-area, #print-area *{visibility:visible;}
+    #print-area{
+      display:block !important;
+      position:absolute;top:0;left:0;width:100%;
+      padding:24px;background:#fff;
+    }
+    #print-area, #print-area *{color:#000 !important;border-color:#000 !important;background:#fff !important;}
+    #print-area h2{font-size:18px;margin:0 0 14px;}
   }
 
   @media(max-width:420px){
@@ -696,12 +733,15 @@
   <div class="modal-card">
     <h3>Load Summary</h3>
     <div id="summary-modal-body" class="summary-modal-text"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="summary-close">Close</button>
-      <button class="btn btn-primary" id="summary-copy">Copy</button>
+    <div class="modal-actions" style="flex-wrap:wrap;">
+      <button class="btn btn-ghost" id="summary-close" style="flex:1 1 45%;">Close</button>
+      <button class="btn btn-ghost" id="summary-copy" style="flex:1 1 45%;">Copy</button>
+      <button class="btn btn-primary" id="summary-pdf" style="flex:1 1 100%;">⬇ Save as PDF</button>
     </div>
   </div>
 </div>
+
+<div id="print-area"></div>
 
 <div id="toast" class="toast hidden"><div class="dot"></div><span id="toast-text"></span></div>
 
@@ -1092,31 +1132,52 @@ $('delete-load-btn').addEventListener('click', async ()=>{
   }
 });
 
-function buildSummaryText(){
+function gatherSummaryValues(){
   const d = currentLoadData;
   const created = d.createdAt?.toDate ? d.createdAt.toDate() : new Date();
   const dateStr = created.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-  const timeStr = created.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-
-  const dustLines = currentFirstSamples.length
-    ? currentFirstSamples.map((s,i)=> `  ${i+1}) ${fmtPct(s.dustPercent)}%`).join('\n')
-    : '  —';
-
-  const ncValues = [
+  const dustVals = currentFirstSamples.map(s=>s.dustPercent);
+  const ncVals = [
     ...currentFirstSamples.map(s=>s.ncPercent),
     ...currentOtherSamples.map(s=>s.ncPercent)
   ];
-  const ncLines = ncValues.length
-    ? ncValues.map((v,i)=> `  ${i+1}) ${fmtPct(v)}%`).join('\n')
-    : '  —';
   const firstCount = d.firstCount || 0;
   const otherCount = d.otherCount || 0;
   const totalCount = firstCount + otherCount;
   const avgNc = totalCount > 0 ? ((d.firstNcSum||0)+(d.otherNcSum||0))/totalCount : null;
+  return { d, dateStr, dustVals, ncVals, avgNc };
+}
 
+function buildSummaryTableHTML(){
+  const { d, dateStr, dustVals, ncVals, avgNc } = gatherSummaryValues();
+  const rowCount = Math.max(dustVals.length, ncVals.length, 1);
+  let rows = '';
+  for (let i=0; i<rowCount; i++){
+    const dv = dustVals[i] != null ? fmtPct(dustVals[i]) : '';
+    const nv = ncVals[i] != null ? fmtPct(ncVals[i]) : '';
+    rows += `<tr><td>${dv}</td><td>${nv}</td></tr>`;
+  }
+  return `
+    <table class="summary-table">
+      <tr><td class="lbl">Date</td><td>${dateStr}</td></tr>
+      <tr><td class="lbl">Vehicle No</td><td>${escapeHtml(d.vehicleNumber||'')}${d.returned ? ' (Returned)' : ''}</td></tr>
+      <tr><td class="lbl">Type</td><td>${d.coalType}</td></tr>
+    </table>
+    <table class="summary-table">
+      <tr class="col-head"><td>Dust %</td><td>Non-Carbon %</td></tr>
+      ${rows}
+      <tr class="avg-row"><td></td><td>Avg: ${avgNc!=null ? fmtPct(avgNc)+'%' : '—'}</td></tr>
+    </table>
+  `;
+}
+
+function buildSummaryPlainText(){
+  const { d, dateStr, dustVals, ncVals, avgNc } = gatherSummaryValues();
+  const dustLines = dustVals.length ? dustVals.map((v,i)=> `  ${i+1}) ${fmtPct(v)}%`).join('\n') : '  —';
+  const ncLines = ncVals.length ? ncVals.map((v,i)=> `  ${i+1}) ${fmtPct(v)}%`).join('\n') : '  —';
   return `Date: ${dateStr}
-Time: ${timeStr}
 Vehicle: ${d.vehicleNumber}${d.returned ? '  (Returned)' : ''}
+Type: ${d.coalType}
 
 Dust %:
 ${dustLines}
@@ -1128,18 +1189,21 @@ Average Non-Carbon %: ${avgNc!=null ? fmtPct(avgNc)+'%' : '—'}`;
 }
 
 $('view-summary-btn').addEventListener('click', ()=>{
-  $('summary-modal-body').textContent = buildSummaryText();
+  $('summary-modal-body').innerHTML = buildSummaryTableHTML();
   $('summary-modal').classList.remove('hidden');
 });
 $('summary-close').addEventListener('click', ()=> $('summary-modal').classList.add('hidden'));
 $('summary-copy').addEventListener('click', async ()=>{
-  const text = $('summary-modal-body').textContent;
   try{
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(buildSummaryPlainText());
     showToast('Copied');
   }catch(err){
     showToast('Copy failed — select text manually');
   }
+});
+$('summary-pdf').addEventListener('click', ()=>{
+  $('print-area').innerHTML = `<h2>Coal Load QC — Summary</h2>` + buildSummaryTableHTML();
+  window.print();
 });
 
 $('return-load-btn').addEventListener('click', async ()=>{
